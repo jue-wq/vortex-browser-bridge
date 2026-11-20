@@ -1,6 +1,6 @@
 import { defineBackground } from "wxt/utils/define-background";
 import browser from "webextension-polyfill";
-import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema } from "../protocol/schema";
+import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema, type InboundMessage } from "../protocol/schema";
 import { chunkBatch } from "../protocol/chunker";
 import { parseSelectedUrls } from "../capture/parseSelectedUrls";
 import { handoffBrowserDownload } from "../capture/handoffBrowserDownload";
@@ -27,6 +27,13 @@ export default defineBackground(() => {
   };
 
   let connectionState: "connected" | "disconnected" = "disconnected";
+  let lastStatusUpdate: Extract<InboundMessage, { type: "status_update" }> | null = null;
+  let lastQueuesSync: Extract<InboundMessage, { type: "queues_sync" }> | null = null;
+  connection.onMessage((message) => {
+    if (message.type === "status_update") lastStatusUpdate = message;
+    if (message.type === "queues_sync") lastQueuesSync = message;
+    void browser.runtime.sendMessage({ type: "desktop_state", status: lastStatusUpdate, queues: lastQueuesSync }).catch(() => undefined);
+  });
   const supervisor = new ConnectionSupervisor(
     connection,
     () => HandshakeSchema.parse({
@@ -135,6 +142,9 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message)) return undefined;
+    if (message.type === "get_desktop_state") {
+      return Promise.resolve({ type: "desktop_state", status: lastStatusUpdate, queues: lastQueuesSync });
+    }
     if (message.type === "get_connection_state") {
       return Promise.resolve({ type: "connection_state", state: connectionState });
     }
