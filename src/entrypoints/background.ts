@@ -117,7 +117,10 @@ export default defineBackground(() => {
     void handleContextMenu(info, tab);
   });
 
-  browser.permissions.onAdded.addListener(() => {\n    void installContextMenus();\n    void installDownloadListener();\n  });
+  browser.permissions.onAdded.addListener(() => {
+    void installContextMenus();
+    void installDownloadListener();
+  });
 
   let downloadListenerInstalled = false;
   async function installDownloadListener(): Promise<void> {
