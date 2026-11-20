@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const RequestId = z.string().min(1).max(128);
 const HttpUrl = z.string().url().max(8192);
-const HeaderMap = z.record(z.string().min(1).max(256), z.string().max(16_384));
+const HeaderMap = z.record(z.string().min(1).max(256), z.string().max(16_384)).superRefine((headers, context) => {\n  if (Object.keys(headers).length > 64) context.addIssue({ code: "custom", message: "At most 64 headers are allowed" });\n});
 const CookieSchema = z.object({
   name: z.string().min(1).max(256),
   value: z.string().max(16_384),
@@ -28,8 +28,8 @@ export const AddDownloadSchema = z.object({
   filename: z.string().max(1024).optional(),
   headers: HeaderMap.optional(),
   cookies: z.array(CookieSchema).max(256).optional(),
-  referrer: HttpUrl.optional(),
-  download_page: HttpUrl.optional(),
+  referrer: z.string().max(8192).optional(),
+  download_page: z.string().max(8192).optional(),
   auto_start: z.boolean().optional(),
   queue_id: z.string().max(128).optional()
 });
