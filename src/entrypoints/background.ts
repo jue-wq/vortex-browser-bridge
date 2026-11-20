@@ -2,6 +2,7 @@ import { defineBackground } from "wxt/utils/define-background";
 import browser from "webextension-polyfill";
 import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema } from "../protocol/schema";
 import { chunkBatch } from "../protocol/chunker";
+import { parseSelectedUrls } from "../capture/parseSelectedUrls";
 import { getSettings, saveSettings } from "../platform/storage";
 import { NativeMessagingTransport } from "../transport/NativeMessagingTransport";
 import { ConnectionManager } from "../transport/ConnectionManager";
@@ -89,13 +90,7 @@ export default defineBackground(() => {
       }
 
       if (info.menuItemId === MENU_DOWNLOAD_SELECTION && info.selectionText) {
-        const urls = (info.selectionText.match(/https?:\/\/[^\s<>"']+/gi) ?? [])
-          .map((value) => value.replace(/[),.;!?]+$/, ""))
-          .filter((value) => {
-            try { const url = new URL(value); return url.protocol === "http:" || url.protocol === "https:"; }
-            catch { return false; }
-          })
-          .slice(0, 500);
+        const urls = parseSelectedUrls(info.selectionText, 500);
         if (urls.length === 0) return;
         const batch = AddBatchSchema.parse({
           type: "add_batch",
