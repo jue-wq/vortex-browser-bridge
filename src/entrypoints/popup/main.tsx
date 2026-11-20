@@ -43,7 +43,7 @@ function Popup() {
     try {
       if (!capturePermissions) {
         const granted = await browser.permissions.request({
-          permissions: ["contextMenus", "downloads"]
+          permissions: ["contextMenus", "downloads"] as never
         });
         if (!granted) {
           setNotice("Capture permissions were not granted.");
