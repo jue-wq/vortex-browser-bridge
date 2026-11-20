@@ -28,7 +28,7 @@ describe("handoffBrowserDownload", () => {
     expect(cancel).not.toHaveBeenCalled();
   });
 
-  it("ignores non-HTTP downloads", async () => {
+  it("sends only a basename instead of the local absolute download path", async () => {\n    const send = vi.fn(async () => undefined);\n    const cancel = vi.fn(async () => undefined);\n    await handoffBrowserDownload({ ...item, filename: "C:\\\\Users\\\\me\\\\Downloads\\\\file.bin" }, true, send, cancel);\n    expect(send.mock.calls[0]?.[0]).toMatchObject({ filename: "file.bin" });\n  });\n\n  it("ignores non-HTTP downloads", async () => {
     const send = vi.fn(async () => undefined);
     const cancel = vi.fn(async () => undefined);
     await expect(handoffBrowserDownload({ ...item, url: "blob:https://example.com/id" }, true, send, cancel)).resolves.toBe("skipped");
