@@ -1,6 +1,6 @@
 import { defineBackground } from "wxt/utils/define-background";
 import browser from "webextension-polyfill";
-import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema, type InboundMessage } from "../protocol/schema";
+import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema, TaskControlSchema, type InboundMessage } from "../protocol/schema";
 import { chunkBatch } from "../protocol/chunker";
 import { parseSelectedUrls } from "../capture/parseSelectedUrls";
 import { handoffBrowserDownload } from "../capture/handoffBrowserDownload";
@@ -31,7 +31,8 @@ export default defineBackground(() => {
   let lastQueuesSync: Extract<InboundMessage, { type: "queues_sync" }> | null = null;
   connection.onMessage((message) => {
     if (message.type === "status_update") lastStatusUpdate = message;
-    if (message.type === "queues_sync") lastQueuesSync = message;
+    else if (message.type === "queues_sync") lastQueuesSync = message;
+    else return;
     void browser.runtime.sendMessage({ type: "desktop_state", status: lastStatusUpdate, queues: lastQueuesSync }).catch(() => undefined);
   });
   const supervisor = new ConnectionSupervisor(
@@ -142,6 +143,11 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message)) return undefined;
+    if (message.type === "control_download" && "action" in message && (message.action === "pause" || message.action === "resume") && "taskId" in message && typeof message.taskId === "string") {
+      return supervisor.send(TaskControlSchema.parse({ type: "task_control", action: message.action, task_id: message.taskId }))
+        .then(() => ({ ok: true }))
+        .catch((error: unknown) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+    }
     if (message.type === "get_desktop_state") {
       return Promise.resolve({ type: "desktop_state", status: lastStatusUpdate, queues: lastQueuesSync });
     }
