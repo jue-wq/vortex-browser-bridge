@@ -38,7 +38,8 @@ export class ConnectionSupervisor {
   /** Send only after a successful handshake; used by all capture entrypoints. */
   async send(message: OutboundMessage): Promise<void> {
     if (!this.started) this.start();
-    await this.connectNow();
+    if (this.connecting) await this.connecting;
+    else await this.connectNow();
     if (!this.connection.isConnected) throw new Error("VortexDM native host is not connected");
     await this.connection.send(message);
   }
@@ -58,8 +59,9 @@ export class ConnectionSupervisor {
   }
 
   private async connectNow(): Promise<void> {
-    if (!this.started || this.connection.isConnected) return;
+    if (!this.started) return;
     if (this.connecting) return this.connecting;
+    if (this.connection.isConnected) return;
 
     this.connecting = (async () => {
       try {
