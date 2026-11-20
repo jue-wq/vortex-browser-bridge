@@ -1,12 +1,13 @@
 # Vortex Browser Bridge
 
-A cross-browser extension that connects Chrome/Chromium and Firefox to VortexDM through a validated IPC protocol and Native Messaging.
+A cross-browser extension that hands downloads, selected links, and media-extraction requests from Chrome/Chromium and Firefox to VortexDM.
 
-> Project status: Phase 1 foundation. The desktop IPC schema is still a draft pending comparison with VortexDM's canonical `IPC_PROTOCOL.md`.
+> Project status: browser-side capture MVP. The production VortexDM Native Messaging host and queue adapter are not implemented yet; see the [shared IPC v1 proposal](https://github.com/jue-wq/VortexDM/blob/main/docs/IPC_PROTOCOL.md).
 
 ## Requirements
 
 - Node.js 22 or newer
+- Python 3.10+ for mock-host integration tests
 - npm
 
 ## Development
@@ -21,13 +22,23 @@ npm run build
 npm run build:firefox
 ```
 
+## Capture features
+
+The popup lets the user grant optional `contextMenus` and `downloads` permissions. Once granted:
+- Right-click a link to send it to VortexDM.
+- Right-click a page/video/audio element to request media extraction.
+- Select text containing URLs to send a bounded, chunked batch.
+- Automatic download handoff is an additional opt-in. The original browser download is cancelled only after a positive desktop ACK; otherwise it continues normally.
+- Incognito downloads are excluded. The current implementation never reads or forwards cookies.
+
 ## Mock Native Host
 
-The development-only host in `scripts/mock-native-host.py` implements the 4-byte little-endian Native Messaging frame format and responds to handshake, status, queue, and acknowledgement messages. Register it as `com.vortexdm.native_host` in the browser's Native Messaging host registry before testing the extension end-to-end.
+The development-only host in `scripts/mock-native-host.py` implements 4-byte little-endian Native Messaging frames and responds to handshake, status, queue, and ACK messages. It is for protocol development only and is not the production VortexDM host.
 
 ## Project documents
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [IPC Protocol v1 draft](docs/IPC_PROTOCOL.md)
+- [Browser IPC v1 proposal](docs/IPC_PROTOCOL.md)
+- [VortexDM shared IPC v1 proposal](https://github.com/jue-wq/VortexDM/blob/main/docs/IPC_PROTOCOL.md)
 
-Do not use the draft protocol for production transfers until it has been reconciled with the desktop application's canonical schema.
+Never use the mock host or draft protocol as evidence that production desktop integration is complete.
