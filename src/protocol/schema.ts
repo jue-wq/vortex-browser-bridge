@@ -15,7 +15,7 @@ const CookieSchema = z.object({
   path: z.string().max(4096).optional(),
   secure: z.boolean().optional(),
   httpOnly: z.boolean().optional(),
-  expirationDate: z.number().finite().optional(),
+  expirationDate: z.number().optional(),
   sameSite: z.string().max(32).optional()
 });
 
@@ -104,11 +104,11 @@ export const StatusUpdateSchema = z.object({
   active_downloads: z.array(z.object({
     id: z.string().min(1).max(128),
     filename: z.string().max(1024),
-    progress: z.number().finite().min(0).max(100).optional(),
-    speed: z.number().finite().nonnegative().optional(),
+    progress: z.number().min(0).max(100).optional(),
+    speed: z.number().nonnegative().optional(),
     status: z.string().min(1).max(64)
   })).max(1000),
-  total_speed: z.number().finite().nonnegative().optional(),
+  total_speed: z.number().nonnegative().optional(),
   theme: z.enum(["modern-dark", "pure-oled", "modern-light"]).optional()
 });
 
