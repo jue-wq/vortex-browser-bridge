@@ -16,12 +16,15 @@ describe("chunkBatch", () => {
     expect(chunks).toHaveLength(1);
     expect(chunks[0]?.chunk_index).toBe(0);
     expect(chunks[0]?.chunk_total).toBe(1);
+    expect(chunks[0]?.batch_id).toBeUndefined();
   });
   it("splits batches under the configured byte budget", () => {
     const chunks = chunkBatch(makeMessage(20), 1024);
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every((chunk, index) => chunk.chunk_index === index)).toBe(true);
     expect(chunks.every((chunk) => chunk.chunk_total === chunks.length)).toBe(true);
+    expect(chunks.every((chunk) => chunk.batch_id === chunks[0]?.batch_id)).toBe(true);
+    expect(chunks[0]?.batch_id).toBeTruthy();
     expect(chunks.flatMap((chunk) => chunk.links)).toHaveLength(20);
   });
   it("rejects an invalid byte budget", () => {
