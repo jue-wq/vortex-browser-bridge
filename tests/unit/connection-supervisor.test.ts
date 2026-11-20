@@ -50,9 +50,9 @@ describe("ConnectionSupervisor", () => {
     );
 
     supervisor.start();
-    await vi.waitFor(() => expect(scheduler.delays).toEqual([1_000]));
+    await vi.waitFor(() => expect(scheduler.delays).toEqual([30_000]));
     await supervisor.retry();
-    expect(scheduler.delays).toEqual([1_000, 2_000]);
+    expect(scheduler.delays).toEqual([30_000, 60_000]);
 
     supervisor.stop();
     expect(scheduler.cancelled).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe("ConnectionSupervisor", () => {
     await vi.waitFor(() => expect(transport.send).toHaveBeenCalledWith(handshake));
     transport.drop();
 
-    expect(scheduler.delays).toEqual([1_000]);
+    expect(scheduler.delays).toEqual([30_000]);
     supervisor.stop();
   });
 
@@ -82,11 +82,11 @@ describe("ConnectionSupervisor", () => {
     );
 
     supervisor.start();
-    await vi.waitFor(() => expect(scheduler.delays).toEqual([1_000]));
+    await vi.waitFor(() => expect(scheduler.delays).toEqual([30_000]));
     await supervisor.retry();
     expect(scheduler.cancelled).toBeGreaterThan(0);
     transport.drop();
-    expect(scheduler.delays).toEqual([1_000, 1_000]);
+    expect(scheduler.delays).toEqual([30_000, 30_000]);
 
     supervisor.stop();
   });
