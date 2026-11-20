@@ -22,6 +22,15 @@ npm run build
 npm run build:firefox
 ```
 
+## Build installable packages
+
+```bash
+npm run zip
+npm run zip:firefox
+```
+
+WXT writes browser-specific ZIP packages under `.output/`. CI also builds both packages and publishes them as a downloadable workflow artifact for 14 days. These are unsigned development packages until a release-signing and store-submission process is configured.
+
 ## Capture features
 
 The popup lets the user grant optional `contextMenus` and `downloads` permissions. Once granted:
