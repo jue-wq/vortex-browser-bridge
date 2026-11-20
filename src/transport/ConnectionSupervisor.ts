@@ -57,6 +57,7 @@ export class ConnectionSupervisor {
       this.scheduler.cancel();
       this.onState?.("connected");
     } catch (error) {
+      this.connection.disconnect();
       this.onState?.("disconnected", error instanceof Error ? error.message : String(error));
       this.scheduleRetry();
     }
