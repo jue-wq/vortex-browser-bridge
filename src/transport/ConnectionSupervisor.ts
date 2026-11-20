@@ -8,13 +8,14 @@ export interface ReconnectScheduler {
 }
 
 /**
- * Keeps the native host connection alive with capped exponential backoff.
- * Scheduling is injected so MV3 can use browser.alarms rather than relying
- * on a service-worker timer that may be suspended.
+ * Owns the native-host handshake and reconnect lifecycle.
+ * MV3 callers use browser.alarms for retries so service-worker suspension
+ * cannot silently discard a timer.
  */
 export class ConnectionSupervisor {
   private started = false;
   private retryAttempt = 0;
+  private connecting: Promise<void> | null = null;
   private unsubscribeDisconnect: (() => void) | null = null;
 
   constructor(
@@ -34,7 +35,15 @@ export class ConnectionSupervisor {
     void this.connectNow();
   }
 
-  /** Called by the alarm handler when the scheduled retry fires. */
+  /** Send only after a successful handshake; used by all capture entrypoints. */
+  async send(message: OutboundMessage): Promise<void> {
+    if (!this.started) this.start();
+    await this.connectNow();
+    if (!this.connection.isConnected) throw new Error("VortexDM native host is not connected");
+    await this.connection.send(message);
+  }
+
+  /** Called by the alarm handler when a scheduled retry fires. */
   async retry(): Promise<void> {
     if (!this.started || this.connection.isConnected) return;
     await this.connectNow();
@@ -50,17 +59,25 @@ export class ConnectionSupervisor {
 
   private async connectNow(): Promise<void> {
     if (!this.started || this.connection.isConnected) return;
-    try {
-      await this.connection.connect();
-      await this.connection.send(this.handshake());
-      this.retryAttempt = 0;
-      this.scheduler.cancel();
-      this.onState?.("connected");
-    } catch (error) {
-      this.connection.disconnect();
-      this.onState?.("disconnected", error instanceof Error ? error.message : String(error));
-      this.scheduleRetry();
-    }
+    if (this.connecting) return this.connecting;
+
+    this.connecting = (async () => {
+      try {
+        await this.connection.connect();
+        await this.connection.send(this.handshake());
+        this.retryAttempt = 0;
+        this.scheduler.cancel();
+        this.onState?.("connected");
+      } catch (error) {
+        this.connection.disconnect();
+        this.onState?.("disconnected", error instanceof Error ? error.message : String(error));
+        this.scheduleRetry();
+      }
+    })().finally(() => {
+      this.connecting = null;
+    });
+
+    return this.connecting;
   }
 
   private scheduleRetry(): void {
