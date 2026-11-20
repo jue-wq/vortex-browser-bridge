@@ -29,7 +29,7 @@ describe("IPC schemas", () => {
     }).success).toBe(false);
   });
 
-  it("bounds collection sizes and string lengths", () => {
+  it("rejects non-HTTP URL schemes at the IPC boundary", () => {\n    expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "file:///etc/passwd" }).success).toBe(false);\n    expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "ftp://example.com/file" }).success).toBe(false);\n  });\n\n  it("bounds collection sizes and string lengths", () => {
     expect(OutboundMessageSchema.safeParse({
       type: "handshake", protocol_version: 1,
       extension_version: "0.1.0", capabilities: Array(33).fill("native_messaging")
