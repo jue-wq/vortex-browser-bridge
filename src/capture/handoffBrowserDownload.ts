@@ -29,7 +29,7 @@ export async function handoffBrowserDownload(
     await send(AddDownloadSchema.parse({
       type: "add_download",
       url: item.url,
-      filename: item.filename,
+      filename: item.filename?.split(/[\\/]/).filter(Boolean).pop(),
       referrer: item.referrer,
       download_page: item.referrer,
       auto_start: true
