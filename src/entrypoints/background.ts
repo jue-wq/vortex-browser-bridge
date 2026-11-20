@@ -132,6 +132,8 @@ export default defineBackground(() => {
           item,
           settings.autoCapture,
           (message) => supervisor.send(message),
+          (downloadId) => browser.downloads.pause(downloadId),
+          (downloadId) => browser.downloads.resume(downloadId),
           (downloadId) => browser.downloads.cancel(downloadId)
         );
         if (result === "kept_in_browser") {
