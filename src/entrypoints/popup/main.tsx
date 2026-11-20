@@ -4,6 +4,15 @@ import browser from "webextension-polyfill";
 import "./style.css";
 
 type ConnectionState = "connected" | "disconnected" | "checking";
+type DesktopStatus = { active_downloads: Array<{ id: string; filename: string; progress?: number; speed?: number; status: string }>; total_speed?: number; theme?: string };
+type QueueSnapshot = { queues: Array<{ id: string; name: string; category?: string }> };
+
+function formatSpeed(value?: number): string {
+  if (value === undefined || !Number.isFinite(value)) return "";
+  if (value < 1024) return `${Math.round(value)} B/s`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB/s`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB/s`;
+}
 
 function Popup() {
   const [connection, setConnection] = useState<ConnectionState>("checking");
@@ -11,6 +20,8 @@ function Popup() {
   const [capturePermissions, setCapturePermissions] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [desktopStatus, setDesktopStatus] = useState<DesktopStatus | null>(null);
+  const [desktopQueues, setDesktopQueues] = useState<QueueSnapshot | null>(null);
 
   useEffect(() => {
     const onMessage = (message: unknown) => {
@@ -20,6 +31,10 @@ function Popup() {
         setConnection(message.state);
       }
       if (message.type === "capture_error") setNotice("VortexDM did not acknowledge the handoff. Your browser download was kept.");
+      if (message.type === "desktop_state" && "status" in message && "queues" in message) {
+        if (message.status && typeof message.status === "object" && "active_downloads" in message.status) setDesktopStatus(message.status as DesktopStatus);
+        if (message.queues && typeof message.queues === "object" && "queues" in message.queues) setDesktopQueues(message.queues as QueueSnapshot);
+      }
     };
     browser.runtime.onMessage.addListener(onMessage);
     void browser.runtime.sendMessage({ type: "get_connection_state" })
@@ -27,6 +42,12 @@ function Popup() {
         if (typeof response === "object" && response !== null && "state" in response &&
             (response.state === "connected" || response.state === "disconnected")) setConnection(response.state);
       }).catch(() => setConnection("disconnected"));
+    void browser.runtime.sendMessage({ type: "get_desktop_state" }).then((response: unknown) => {
+      if (typeof response === "object" && response !== null && "status" in response && "queues" in response) {
+        if (response.status && typeof response.status === "object" && "active_downloads" in response.status) setDesktopStatus(response.status as DesktopStatus);
+        if (response.queues && typeof response.queues === "object" && "queues" in response.queues) setDesktopQueues(response.queues as QueueSnapshot);
+      }
+    }).catch(() => undefined);
     void browser.runtime.sendMessage({ type: "get_capture_state" })
       .then((response: unknown) => {
         if (typeof response === "object" && response !== null && "enabled" in response && "permissionsGranted" in response) {
@@ -91,6 +112,28 @@ function Popup() {
               : "The bridge will retry automatically. Make sure VortexDM and its Native Messaging host are installed."}
           </p>
         </div>
+      </section>
+
+      <section class="border-t border-white/10 py-4">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-sm font-semibold">Desktop activity</p>
+          <span class="text-[10px] text-slate-400">{desktopStatus?.active_downloads.length ?? 0} active</span>
+        </div>
+        {desktopStatus?.active_downloads.length ? (
+          <div class="space-y-2">
+            {desktopStatus.active_downloads.slice(0, 4).map((download) => (
+              <div key={download.id} class="rounded-lg bg-white/5 p-2">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="truncate text-[11px] font-medium">{download.filename}</p>
+                  <span class="shrink-0 text-[10px] text-slate-400">{download.progress === undefined ? download.status : `${Math.round(download.progress)}%`}</span>
+                </div>
+                {download.progress !== undefined && <div class="mt-1 h-1 overflow-hidden rounded bg-white/10"><div class="h-full rounded bg-cyan-400" style={{ width: `${Math.max(0, Math.min(100, download.progress))}%` }} /></div>}
+                {download.speed !== undefined && <p class="mt-1 text-[10px] text-slate-500">{formatSpeed(download.speed)}</p>}
+              </div>
+            ))}
+          </div>
+        ) : <p class="text-[11px] text-slate-500">No active downloads reported by VortexDM.</p>}
+        {desktopQueues?.queues.length ? <p class="mt-3 text-[10px] text-slate-400">Queues: {desktopQueues.queues.map((queue) => queue.name).join(" · ")}</p> : null}
       </section>
 
       <section class="border-t border-white/10 py-4">
