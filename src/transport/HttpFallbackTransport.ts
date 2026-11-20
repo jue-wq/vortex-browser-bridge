@@ -34,6 +34,7 @@ export class HttpFallbackTransport implements ITransport {
     try {
       const response = await fetch(new URL("/v1/ipc", this.config.baseUrl), {
         method: "POST",
+        redirect: "error",
         headers: {
           "Content-Type": "application/json",
           "X-Vortex-Api-Key": this.config.apiKey
