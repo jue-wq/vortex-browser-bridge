@@ -123,28 +123,42 @@ export default defineBackground(() => {
   });
 
   let downloadListenerInstalled = false;
+  async function handleBrowserDownload(item: browser.Downloads.DownloadItem): Promise<void> {
+    try {
+      const settings = await getSettings();
+      const result = await handoffBrowserDownload(
+        item,
+        settings.autoCapture,
+        (message) => supervisor.send(message),
+        (downloadId) => browser.downloads.pause(downloadId),
+        (downloadId) => browser.downloads.resume(downloadId),
+        (downloadId) => browser.downloads.cancel(downloadId)
+      );
+      if (result === "kept_in_browser") {
+        console.info("[VortexDM] Handoff was not acknowledged; browser download continues.");
+      }
+    } catch (error) {
+      console.warn("[VortexDM] Download handoff failed; browser download was left intact where possible.", error);
+    }
+  }
+
   async function installDownloadListener(): Promise<void> {
     if (downloadListenerInstalled) return;
     const granted = await browser.permissions.contains({ permissions: ["downloads"] });
     if (!granted) return;
+    browser.downloads.onCreated.addListener(handleBrowserDownload);
     downloadListenerInstalled = true;
-    browser.downloads.onCreated.addListener((item) => {
-      void (async () => {
-        const settings = await getSettings();
-        const result = await handoffBrowserDownload(
-          item,
-          settings.autoCapture,
-          (message) => supervisor.send(message),
-          (downloadId) => browser.downloads.pause(downloadId),
-          (downloadId) => browser.downloads.resume(downloadId),
-          (downloadId) => browser.downloads.cancel(downloadId)
-        );
-        if (result === "kept_in_browser") {
-          console.info("[VortexDM] Handoff was not acknowledged; browser download continues.");
-        }
-      })();
-    });
   }
+
+  function removeDownloadListener(): void {
+    if (!downloadListenerInstalled) return;
+    browser.downloads.onCreated.removeListener(handleBrowserDownload);
+    downloadListenerInstalled = false;
+  }
+
+  browser.permissions.onRemoved.addListener((removed) => {
+    if (removed.permissions?.includes("downloads")) removeDownloadListener();
+  });
 
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message)) return undefined;
@@ -173,6 +187,7 @@ export default defineBackground(() => {
       return getSettings().then(async (settings) => {
         await saveSettings({ ...settings, autoCapture: message.enabled as boolean });
         await installContextMenus();
+        await installDownloadListener();
         return { type: "capture_state", enabled: message.enabled, permissionsGranted: true };
       });
     }
