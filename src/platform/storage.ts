@@ -14,7 +14,7 @@ export interface BridgeSettings {
 }
 
 export const DEFAULT_SETTINGS: BridgeSettings = {
-  autoCapture: true,
+  autoCapture: false,
   minimumFileSizeBytes: 1024 * 1024,
   skipShortcut: "Alt",
   incognitoMode: "block",
