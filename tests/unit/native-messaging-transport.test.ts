@@ -67,6 +67,20 @@ describe("NativeMessagingTransport", () => {
     await expect(pending).rejects.toThrow("queue full");
   });
 
+  it("rejects duplicate pending request IDs instead of replacing the first waiter", async () => {
+    await transport.connect();
+    const first = transport.send(request);
+    await expect(transport.send(request)).rejects.toThrow("Duplicate pending Native Messaging request ID");
+    port.onMessage.emit({ type: "ack", request_id: "r-1", accepted: true });
+    await expect(first).resolves.toBeUndefined();
+  });
+
+  it("rejects a request when the ACK deadline expires", async () => {
+    transport = new NativeMessagingTransport("com.vortexdm.native_host", 5);
+    await transport.connect();
+    await expect(transport.send(request)).rejects.toThrow("acknowledgement timed out");
+  });
+
   it("rejects pending requests when the host disconnects", async () => {
     await transport.connect();
     const pending = transport.send(request);
