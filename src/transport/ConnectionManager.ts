@@ -1,10 +1,11 @@
 import type { OutboundMessage } from "../protocol/schema";
-import type { ITransport, MessageListener } from "./ITransport";
+import type { DisconnectListener, ITransport, MessageListener } from "./ITransport";
 
 export class ConnectionManager {
   private connected = false;
   private connecting: Promise<void> | null = null;
   private readonly listeners = new Set<MessageListener>();
+  private readonly disconnectListeners = new Set<DisconnectListener>();
   private unsubscribeMessage: (() => void) | null = null;
   private unsubscribeDisconnect: (() => void) | null = null;
 
@@ -18,11 +19,12 @@ export class ConnectionManager {
       this.unsubscribeMessage = this.transport.onMessage((message) => {
         for (const listener of this.listeners) listener(message);
       });
-      this.unsubscribeDisconnect = this.transport.onDisconnect(() => {
+      this.unsubscribeDisconnect = this.transport.onDisconnect((reason) => {
         this.connected = false;
         this.unsubscribeMessage?.();
         this.unsubscribeMessage = null;
         this.unsubscribeDisconnect = null;
+        for (const listener of this.disconnectListeners) listener(reason);
       });
       this.connected = true;
     }).finally(() => {
@@ -40,6 +42,11 @@ export class ConnectionManager {
   onMessage(listener: MessageListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  onDisconnect(listener: DisconnectListener): () => void {
+    this.disconnectListeners.add(listener);
+    return () => this.disconnectListeners.delete(listener);
   }
 
   disconnect(): void {
