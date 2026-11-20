@@ -3,6 +3,7 @@ import browser from "webextension-polyfill";
 import { AddBatchSchema, AddDownloadSchema, ExtractMediaSchema, HandshakeSchema } from "../protocol/schema";
 import { chunkBatch } from "../protocol/chunker";
 import { parseSelectedUrls } from "../capture/parseSelectedUrls";
+import { handoffBrowserDownload } from "../capture/handoffBrowserDownload";
 import { getSettings, saveSettings } from "../platform/storage";
 import { NativeMessagingTransport } from "../transport/NativeMessagingTransport";
 import { ConnectionManager } from "../transport/ConnectionManager";
@@ -108,32 +109,29 @@ export default defineBackground(() => {
     void handleContextMenu(info, tab);
   });
 
-  browser.permissions.onAdded.addListener(() => { void installContextMenus(); });
+  browser.permissions.onAdded.addListener(() => {\n    void installContextMenus();\n    void installDownloadListener();\n  });
 
-  browser.downloads.onCreated.addListener((item) => {
-    void (async () => {
-      const settings = await getSettings();
-      if (!settings.autoCapture || item.incognito) return;
-      let url: URL;
-      try { url = new URL(item.url); } catch { return; }
-      if (url.protocol !== "http:" && url.protocol !== "https:") return;
-
-      try {
-        // Keep the browser's original download unless VortexDM explicitly ACKs it.
-        await supervisor.send(AddDownloadSchema.parse({
-          type: "add_download",
-          url: item.url,
-          filename: item.filename,
-          referrer: item.referrer,
-          download_page: item.referrer,
-          auto_start: true
-        }));
-        await browser.downloads.cancel(item.id);
-      } catch (error) {
-        console.info("[VortexDM] Handoff was not acknowledged; browser download continues.", error);
-      }
-    })();
-  });
+  let downloadListenerInstalled = false;
+  async function installDownloadListener(): Promise<void> {
+    if (downloadListenerInstalled) return;
+    const granted = await browser.permissions.contains({ permissions: ["downloads"] });
+    if (!granted) return;
+    downloadListenerInstalled = true;
+    browser.downloads.onCreated.addListener((item) => {
+      void (async () => {
+        const settings = await getSettings();
+        const result = await handoffBrowserDownload(
+          item,
+          settings.autoCapture,
+          (message) => supervisor.send(message),
+          (downloadId) => browser.downloads.cancel(downloadId)
+        );
+        if (result === "kept_in_browser") {
+          console.info("[VortexDM] Handoff was not acknowledged; browser download continues.");
+        }
+      })();
+    });
+  }
 
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message)) return undefined;
