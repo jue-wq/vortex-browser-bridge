@@ -9,8 +9,8 @@ export default defineConfig({
     description: "Connect your browser to VortexDM for reliable downloads and media extraction.",
     version: "0.1.0",
     permissions: ["nativeMessaging", "storage", "alarms"],
-    optional_permissions: ["cookies", "downloads", "webRequest", "contextMenus", "activeTab", "tabs"],
-    optional_host_permissions: ["<all_urls>", "http://127.0.0.1/*"],
+    optional_permissions: ["downloads", "contextMenus"],
+    optional_host_permissions: ["http://127.0.0.1/*"],
     browser_specific_settings: {
       gecko: {
         id: "browser-bridge@vortexdm.app",
