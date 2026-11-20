@@ -45,6 +45,7 @@ export const ExtractMediaSchema = z.object({
 export const AddBatchSchema = z.object({
   type: z.literal("add_batch"),
   request_id: RequestId.optional(),
+  batch_id: z.string().min(1).max(128).optional(),
   links: z.array(z.object({
     url: z.string().url(),
     filename: z.string().optional(),
