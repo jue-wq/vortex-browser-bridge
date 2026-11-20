@@ -58,6 +58,16 @@ function Popup() {
     return () => browser.runtime.onMessage.removeListener(onMessage);
   }, []);
 
+  async function controlDownload(taskId: string, action: "pause" | "resume"): Promise<void> {
+    try {
+      const response = await browser.runtime.sendMessage({ type: "control_download", taskId, action });
+      if (typeof response === "object" && response !== null && "ok" in response && response.ok === true) setNotice(action === "pause" ? "Pause request sent." : "Resume request sent.");
+      else setNotice("VortexDM could not accept the control request.");
+    } catch {
+      setNotice("VortexDM is not connected; the task was not changed.");
+    }
+  }
+
   async function toggleCapture(): Promise<void> {
     setBusy(true);
     setNotice("");
@@ -129,6 +139,13 @@ function Popup() {
                 </div>
                 {download.progress !== undefined && <div class="mt-1 h-1 overflow-hidden rounded bg-white/10"><div class="h-full rounded bg-cyan-400" style={{ width: `${Math.max(0, Math.min(100, download.progress))}%` }} /></div>}
                 {download.speed !== undefined && <p class="mt-1 text-[10px] text-slate-500">{formatSpeed(download.speed)}</p>}
+                <div class="mt-2 flex justify-end">
+                  {download.status.toLowerCase() === "paused" ? (
+                    <button type="button" onClick={() => void controlDownload(download.id, "resume")} class="rounded-md bg-white/10 px-2 py-1 text-[10px] text-slate-200">Resume</button>
+                  ) : (
+                    <button type="button" onClick={() => void controlDownload(download.id, "pause")} class="rounded-md bg-white/10 px-2 py-1 text-[10px] text-slate-200">Pause</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
