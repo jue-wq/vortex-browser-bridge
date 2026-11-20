@@ -1,20 +1,14 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
-    "skipLibCheck": true,
-    "types": ["wxt/client", "vitest/globals"],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "noEmit": true
-  },
-  "include": ["src", "tests", "wxt.config.ts", "vitest.config.ts", "tailwind.config.ts"]
+    "types": ["vitest/globals"]
+  }
 }
