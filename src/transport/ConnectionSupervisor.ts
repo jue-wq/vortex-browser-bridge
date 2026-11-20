@@ -65,7 +65,7 @@ export class ConnectionSupervisor {
 
   private scheduleRetry(): void {
     if (!this.started) return;
-    const delayMs = Math.min(30_000, 1_000 * (2 ** this.retryAttempt));
+    const delayMs = Math.min(15 * 60_000, 30_000 * (2 ** this.retryAttempt));
     this.retryAttempt = Math.min(this.retryAttempt + 1, 5);
     this.scheduler.schedule(delayMs);
   }
