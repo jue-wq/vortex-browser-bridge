@@ -44,8 +44,10 @@ export function chunkBatch(
     chunks.push(AddBatchSchema.parse({ ...metadata, links: current }));
   }
 
+  const batchId = chunks.length > 1 ? crypto.randomUUID() : undefined;
   return chunks.map((chunk, index) => AddBatchSchema.parse({
     ...chunk,
+    ...(batchId ? { batch_id: batchId } : {}),
     chunk_index: index,
     chunk_total: chunks.length
   }));
