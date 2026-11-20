@@ -16,7 +16,7 @@ The extension is organized into four boundaries:
 3. Cookies must never be written to `storage.local` or `storage.session`. Read them only for a user-triggered download or extraction, then pass them in-memory.
 4. The extension validates inbound and outbound IPC payloads at runtime.
 5. Batch messages target a 900 KiB serialized payload budget, below the Native Messaging 1 MiB frame limit.
-6. Do not cancel a browser download until the desktop host has acknowledged accepting it.
+6. Do not cancel a browser download until the desktop host has acknowledged accepting it.\n7. Native host reconnection is scheduled through `browser.alarms`, with a 30-second minimum and capped exponential backoff, so it survives Manifest V3 service-worker suspension.\n8. The optional HTTP fallback rejects redirects to prevent forwarding its API key to a redirected origin.
 
 ## Browser targets
 
