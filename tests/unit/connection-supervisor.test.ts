@@ -39,6 +39,21 @@ const handshake: OutboundMessage = {
 };
 
 describe("ConnectionSupervisor", () => {
+  it("sends capture messages only after the handshake completes", async () => {
+    const transport = new FakeTransport();
+    const order: string[] = [];
+    transport.connect.mockImplementation(async () => { order.push("connect"); });
+    transport.send.mockImplementation(async (message) => { order.push(message.type); });
+    const scheduler = new FakeScheduler();
+    const supervisor = new ConnectionSupervisor(
+      new ConnectionManager(transport), () => handshake, scheduler
+    );
+
+    await supervisor.send({ type: "task_control", action: "focus_app" });
+    expect(order).toEqual(["connect", "handshake", "task_control"]);
+    supervisor.stop();
+  });
+
   it("retries failed connections with capped exponential backoff", async () => {
     const transport = new FakeTransport();
     transport.connect
