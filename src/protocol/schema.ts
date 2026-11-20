@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const RequestId = z.string().min(1).max(128);
-const HttpUrl = z.string().url().max(8192);
+const HttpUrl = z.string().url().max(8192).refine((value) => {\n  const protocol = new URL(value).protocol;\n  return protocol === "http:" || protocol === "https:";\n}, "Only HTTP and HTTPS URLs are accepted");
 const HeaderMap = z.record(z.string().min(1).max(256), z.string().max(16_384)).superRefine((headers, context) => {
   if (Object.keys(headers).length > 64) context.addIssue({ code: "custom", message: "At most 64 headers are allowed" });
 });
