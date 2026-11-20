@@ -53,6 +53,8 @@ export class NativeMessagingTransport implements ITransport {
       return;
     }
 
+    if (this.pending.has(requestId)) throw new Error(`Duplicate pending Native Messaging request ID: ${requestId}`);
+
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(requestId);
