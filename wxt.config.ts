@@ -8,7 +8,7 @@ export default defineConfig({
     short_name: "VortexDM",
     description: "Connect your browser to VortexDM for reliable downloads and media extraction.",
     version: "0.1.0",
-    permissions: ["nativeMessaging", "storage"],
+    permissions: ["nativeMessaging", "storage", "alarms"],
     optional_permissions: ["cookies", "downloads", "webRequest", "contextMenus", "activeTab", "tabs"],
     optional_host_permissions: ["<all_urls>", "http://127.0.0.1/*"],
     browser_specific_settings: {
