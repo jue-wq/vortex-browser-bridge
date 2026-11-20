@@ -57,6 +57,6 @@ describe("handoffBrowserDownload", () => {
     const resume = vi.fn(async () => undefined);
     const cancel = vi.fn(async () => undefined);
     await handoffBrowserDownload({ ...item, filename: "C:\\Users\\me\\Downloads\\file.bin" }, true, send, pause, resume, cancel);
-    expect(send.mock.calls[0]?.[0]).toMatchObject({ filename: "file.bin" });
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ filename: "file.bin" }));
   });
 });
