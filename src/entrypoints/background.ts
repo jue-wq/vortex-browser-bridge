@@ -22,6 +22,14 @@ export default defineBackground(() => {
     }
   };
 
+  let connectionState: "connected" | "disconnected" = "disconnected";
+  browser.runtime.onMessage.addListener((message: unknown) => {
+    if (typeof message === "object" && message !== null && "type" in message && message.type === "get_connection_state") {
+      return Promise.resolve({ type: "connection_state", state: connectionState });
+    }
+    return undefined;
+  });
+
   const supervisor = new ConnectionSupervisor(
     connection,
     () => HandshakeSchema.parse({
@@ -32,6 +40,8 @@ export default defineBackground(() => {
     }),
     scheduler,
     (state, reason) => {
+      connectionState = state;
+      void browser.runtime.sendMessage({ type: "connection_state", state }).catch(() => undefined);
       console.info(`[VortexDM] Native host ${state}.`, reason ?? "");
     }
   );
