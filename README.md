@@ -42,7 +42,7 @@ The popup lets the user grant optional `contextMenus` and `downloads` permission
 
 ## Mock Native Host
 
-The development-only host in `scripts/mock-native-host.py` implements 4-byte little-endian Native Messaging frames and responds to handshake, status, queue, and ACK messages. It is for protocol development only and is not the production VortexDM host.
+The development-only host in `scripts/mock-native-host.py` implements 4-byte little-endian Native Messaging frames and responds to handshake, status, queue, and ACK messages. ACK-bearing requests allow 15 seconds by default for desktop processing. A timeout can still be ambiguous if the desktop accepted a request but its ACK was delayed, so the production host must de-duplicate request IDs. The mock host is for protocol development only and is not the production VortexDM host.
 
 ## Project documents
 
