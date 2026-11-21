@@ -36,6 +36,7 @@ describe("IPC schemas", () => {
   it("rejects non-HTTP URL schemes at the IPC boundary", () => {
     expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "file:///etc/passwd" }).success).toBe(false);
     expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "ftp://example.com/file" }).success).toBe(false);
+    expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "https://user:secret@example.com/file" }).success).toBe(false);
   });
 
   it("bounds collection sizes and string lengths", () => {
