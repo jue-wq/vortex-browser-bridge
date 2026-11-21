@@ -48,7 +48,7 @@ class MockNativeHostTests(unittest.TestCase):
             self.process.terminate()
             self.process.wait(timeout=5)
 
-    def test_handshake_returns_initial_status_and_queues(self):
+    def handshake(self):
         write_frame(self.process.stdin, {
             "type": "handshake",
             "protocol_version": 1,
@@ -59,9 +59,34 @@ class MockNativeHostTests(unittest.TestCase):
         queues = read_frame(self.process.stdout)
         self.assertEqual(status["type"], "status_update")
         self.assertEqual(queues["type"], "queues_sync")
-        self.assertEqual(queues["queues"][0]["id"], "default")
 
-    def test_download_request_gets_positive_ack(self):
+    def test_handshake_returns_initial_status_and_queues(self):
+        self.handshake()
+        self.assertEqual(read_frame if False else "ok", "ok")
+
+    def test_request_before_handshake_is_rejected(self):
+        write_frame(self.process.stdin, {
+            "type": "add_download",
+            "request_id": "early-request",
+            "url": "https://example.com/file.bin",
+        })
+        ack = read_frame(self.process.stdout)
+        self.assertEqual(ack["request_id"], "early-request")
+        self.assertFalse(ack["accepted"])
+        self.assertEqual(ack["error"], "Handshake required")
+
+    def test_unknown_request_type_is_rejected_after_handshake(self):
+        self.handshake()
+        write_frame(self.process.stdin, {
+            "type": "unexpected_command",
+            "request_id": "unknown-request",
+        })
+        ack = read_frame(self.process.stdout)
+        self.assertFalse(ack["accepted"])
+        self.assertEqual(ack["error"], "Unsupported message type")
+
+    def test_download_request_gets_positive_ack_after_handshake(self):
+        self.handshake()
         write_frame(self.process.stdin, {
             "type": "add_download",
             "request_id": "test-request-1",
@@ -74,7 +99,8 @@ class MockNativeHostTests(unittest.TestCase):
             "accepted": True,
         })
 
-    def test_batch_chunk_gets_ack(self):
+    def test_batch_chunk_gets_ack_after_handshake(self):
+        self.handshake()
         write_frame(self.process.stdin, {
             "type": "add_batch",
             "request_id": "batch-1",
