@@ -59,6 +59,7 @@ class MockNativeHostTests(unittest.TestCase):
         queues = read_frame(self.process.stdout)
         self.assertEqual(status["type"], "status_update")
         self.assertEqual(queues["type"], "queues_sync")
+        self.assertEqual(queues["queues"][0]["id"], "default")
 
     def test_handshake_returns_initial_status_and_queues(self):
         self.handshake()
