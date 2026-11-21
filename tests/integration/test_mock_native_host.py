@@ -114,5 +114,21 @@ class MockNativeHostTests(unittest.TestCase):
         self.assertEqual(ack["request_id"], "batch-1")
 
 
+    def test_oversized_frame_is_rejected_before_payload_read(self):
+        self.process.stdin.write(struct.pack("<I", 1024 * 1024 + 1))
+        self.process.stdin.flush()
+        return_code = self.process.wait(timeout=5)
+        self.assertNotEqual(return_code, 0)
+        self.assertIn(b"exceeds 1 MiB", self.process.stderr.read())
+
+    def test_truncated_payload_is_rejected(self):
+        self.process.stdin.write(struct.pack("<I", 10))
+        self.process.stdin.write(b"{}")
+        self.process.stdin.close()
+        return_code = self.process.wait(timeout=5)
+        self.assertNotEqual(return_code, 0)
+        self.assertIn(b"Incomplete Native Messaging payload", self.process.stderr.read())
+
+
 if __name__ == "__main__":
     unittest.main()
