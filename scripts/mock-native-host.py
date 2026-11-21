@@ -4,6 +4,9 @@ import json
 import struct
 import sys
 
+MAX_FRAME_BYTES = 1024 * 1024
+SUPPORTED_REQUESTS = {"add_download", "add_batch", "extract_media", "task_control"}
+
 
 def read_message():
     raw_length = sys.stdin.buffer.read(4)
@@ -12,7 +15,7 @@ def read_message():
     if len(raw_length) != 4:
         raise EOFError("Incomplete Native Messaging length header")
     (length,) = struct.unpack("<I", raw_length)
-    if length > 1024 * 1024:
+    if length > MAX_FRAME_BYTES:
         raise ValueError("Incoming frame exceeds 1 MiB")
     payload = sys.stdin.buffer.read(length)
     if len(payload) != length:
@@ -27,13 +30,27 @@ def write_message(message):
     sys.stdout.buffer.flush()
 
 
+def write_ack(request_id, accepted, error=None):
+    response = {"type": "ack", "request_id": request_id, "accepted": accepted}
+    if error:
+        response["error"] = error
+    write_message(response)
+
+
 def main():
+    handshaken = False
     while True:
         message = read_message()
         if message is None:
             return
+        if not isinstance(message, dict):
+            continue
+
         kind = message.get("type")
         if kind == "handshake":
+            if message.get("protocol_version") != 1:
+                raise ValueError("Unsupported protocol version")
+            handshaken = True
             write_message({
                 "type": "status_update",
                 "active_downloads": [],
@@ -44,12 +61,18 @@ def main():
                 "type": "queues_sync",
                 "queues": [{"id": "default", "name": "Default"}]
             })
-        elif message.get("request_id"):
-            write_message({
-                "type": "ack",
-                "request_id": message["request_id"],
-                "accepted": True
-            })
+            continue
+
+        request_id = message.get("request_id")
+        if not isinstance(request_id, str) or not request_id:
+            continue
+        if not handshaken:
+            write_ack(request_id, False, "Handshake required")
+        elif kind not in SUPPORTED_REQUESTS:
+            write_ack(request_id, False, "Unsupported message type")
+        else:
+            # This mock acknowledges protocol flow only; it does not enqueue work.
+            write_ack(request_id, True)
 
 
 if __name__ == "__main__":
