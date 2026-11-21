@@ -23,6 +23,7 @@ export class ConnectionManager {
         this.connected = false;
         this.unsubscribeMessage?.();
         this.unsubscribeMessage = null;
+        this.unsubscribeDisconnect?.();
         this.unsubscribeDisconnect = null;
         for (const listener of this.disconnectListeners) listener(reason);
       });
