@@ -17,7 +17,7 @@
 5. Batch messages target a 900 KiB serialized payload budget, below the Native Messaging 1 MiB frame limit.
 6. Automatic browser-download capture is opt-in. The browser pauses an in-progress download before requesting desktop acceptance; the original is cancelled only after VortexDM returns a positive ACK. Missing, negative, or timed-out ACKs resume the browser download. Completed, unpausable, and incognito downloads are left untouched.
 7. Native host reconnection uses `browser.alarms` with a 30-second minimum and capped exponential backoff so it survives Manifest V3 service-worker suspension.
-8. The native handshake must complete before any capture message is sent.
+8. The native handshake must complete before any capture message is sent. ACK-bearing requests use a 15-second default deadline to tolerate host startup and bounded batch processing; callers can still configure a shorter deadline in tests.
 9. URLs are limited to HTTP(S) for capture. Selected text is parsed as data, deduplicated, and bounded to 500 URLs per action.
 
 ## Capture behavior
