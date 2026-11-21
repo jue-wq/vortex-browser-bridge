@@ -27,6 +27,11 @@ describe("chunkBatch", () => {
     expect(chunks[0]?.batch_id).toBeTruthy();
     expect(chunks.flatMap((chunk) => chunk.links)).toHaveLength(20);
   });
+  it("does not copy one request ID onto every chunk", () => {
+    const chunks = chunkBatch({ ...makeMessage(20), request_id: "caller-request" }, 1024);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.request_id === undefined)).toBe(true);
+  });
   it("rejects an invalid byte budget", () => {
     expect(() => chunkBatch(makeMessage(1), 10)).toThrow(RangeError);
   });
