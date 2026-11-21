@@ -23,7 +23,7 @@ export class NativeMessagingTransport implements ITransport {
 
   constructor(
     private readonly hostName = "com.vortexdm.native_host",
-    private readonly ackTimeoutMs = 1500
+    private readonly ackTimeoutMs = 15_000
   ) {}
 
   async connect(): Promise<void> {
