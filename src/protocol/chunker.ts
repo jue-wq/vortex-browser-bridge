@@ -19,6 +19,8 @@ export function chunkBatch(
   }
 
   const { links, ...metadata } = message;
+  // Each frame needs its own ACK correlation ID; the transport assigns it.
+  delete metadata.request_id;
   const chunks: AddBatchMessage[] = [];
   let current: typeof links = [];
 
