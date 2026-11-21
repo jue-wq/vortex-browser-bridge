@@ -59,6 +59,28 @@ describe("ConnectionSupervisor", () => {
     expect(scheduler.delays).toEqual([]);
   });
 
+  it("reconnects when restarted while an older connection attempt is pending", async () => {
+    const transport = new FakeTransport();
+    let resolveFirst!: () => void;
+    transport.connect
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValueOnce(undefined);
+    const scheduler = new FakeScheduler();
+    const manager = new ConnectionManager(transport);
+    const supervisor = new ConnectionSupervisor(manager, () => handshake, scheduler);
+
+    supervisor.start();
+    supervisor.stop();
+    supervisor.start();
+    resolveFirst();
+
+    await vi.waitFor(() => expect(transport.connect).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(transport.send).toHaveBeenCalledWith(handshake));
+    expect(manager.isConnected).toBe(true);
+    expect(scheduler.delays).toEqual([]);
+    supervisor.stop();
+  });
+
   it("does not publish a stale connection failure after stop()", async () => {
     const transport = new FakeTransport();
     let rejectConnect!: (error: Error) => void;
