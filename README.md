@@ -37,7 +37,7 @@ The popup lets the user grant optional `contextMenus` and `downloads` permission
 - Right-click a link to send it to VortexDM.
 - Right-click a page/video/audio element to request media extraction.
 - Select text containing URLs to send a bounded, chunked batch.
-- Automatic download handoff is an additional opt-in. An in-progress browser download is paused first and cancelled only after a positive desktop ACK; otherwise it is resumed. Completed, unpausable, and incognito downloads are untouched.
+- Automatic download handoff is an additional opt-in. An in-progress browser download is paused first and cancelled only after a positive desktop ACK; otherwise it is resumed. Completed, unpausable, and incognito downloads are untouched. If the desktop accepts the item but the browser cannot cancel its paused copy, the extension leaves that copy paused and warns the user rather than resuming it and risking a duplicate transfer.
 - Incognito downloads are excluded. The current implementation never reads or forwards cookies.
 
 ## Mock Native Host
