@@ -8,6 +8,7 @@
 - Optional fallback: `POST http://127.0.0.1:<port>/v1/ipc` with `Content-Type: application/json` and `X-Vortex-Api-Key`. Disabled unless explicitly enabled.
 - Native Messaging frames use a 4-byte unsigned little-endian length followed by UTF-8 JSON.
 - Maximum frame: 1 MiB. Browser batch target: 900 KiB serialized JSON.
+- ACK-bearing browser requests use a 15-second default deadline. A timeout remains an ambiguous outcome if the host accepted a request but its ACK was delayed; the desktop must de-duplicate stable `request_id` values.
 
 ## Extension → desktop
 
