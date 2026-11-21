@@ -1,19 +1,53 @@
 # Vortex Browser Bridge
 
-A cross-browser extension that connects Chrome/Chromium and Firefox to VortexDM through a validated IPC protocol and Native Messaging.
+A cross-browser extension that hands downloads, selected links, and media-extraction requests from Chrome/Chromium and Firefox to VortexDM.
 
-> Project status: Phase 1 — foundation and transport layer.
+> Project status: browser-side capture MVP. The production VortexDM Native Messaging host and queue adapter are not implemented yet; see the [shared IPC v1 proposal](https://github.com/jue-wq/VortexDM/blob/main/docs/IPC_PROTOCOL.md).
+
+## Requirements
+
+- Node.js 22 or newer
+- Python 3.10+ for mock-host integration tests
+- npm
 
 ## Development
-
-Requirements: Node.js 20.19+ (or 22.12+) and npm.
 
 ```bash
 npm install
 npm run dev
+npm run dev:firefox
+npm run typecheck
+npm test
 npm run build
 npm run build:firefox
-npm run test
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/IPC_PROTOCOL.md](docs/IPC_PROTOCOL.md) for the implementation contracts.
+## Build installable packages
+
+```bash
+npm run zip
+npm run zip:firefox
+```
+
+WXT writes browser-specific ZIP packages under `.output/`. CI also builds both packages and publishes them as a downloadable workflow artifact for 14 days. These are unsigned development packages until a release-signing and store-submission process is configured.
+
+## Capture features
+
+The popup lets the user grant optional `contextMenus` and `downloads` permissions. Once granted:
+- Right-click a link to send it to VortexDM.
+- Right-click a page/video/audio element to request media extraction.
+- Select text containing URLs to send a bounded, chunked batch.
+- Automatic download handoff is an additional opt-in. An in-progress browser download is paused first and cancelled only after a positive desktop ACK; otherwise it is resumed. Completed, unpausable, and incognito downloads are untouched. If the desktop accepts the item but the browser cannot cancel its paused copy, the extension leaves that copy paused and warns the user rather than resuming it and risking a duplicate transfer.
+- Incognito downloads are excluded. The current implementation never reads or forwards cookies.
+
+## Mock Native Host
+
+The development-only host in `scripts/mock-native-host.py` implements 4-byte little-endian Native Messaging frames and responds to handshake, status, queue, and ACK messages. ACK-bearing requests allow 15 seconds by default for desktop processing. A timeout can still be ambiguous if the desktop accepted a request but its ACK was delayed, so the production host must de-duplicate request IDs. The mock host is for protocol development only and is not the production VortexDM host.
+
+## Project documents
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Browser IPC v1 proposal](docs/IPC_PROTOCOL.md)
+- [VortexDM shared IPC v1 proposal](https://github.com/jue-wq/VortexDM/blob/main/docs/IPC_PROTOCOL.md)
+
+Never use the mock host or draft protocol as evidence that production desktop integration is complete.

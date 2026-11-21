@@ -1,0 +1,11 @@
+node_modules/
+.output/
+.wxt/
+dist/
+coverage/
+*.zip
+*.xpi
+.env
+.env.*
+!.env.example
+.DS_Store
