@@ -109,4 +109,27 @@ describe("NativeMessagingTransport", () => {
     port.onDisconnect.emit();
     await expect(pending).rejects.toThrow("host exited");
   });
+
+  it("rejects pending requests immediately on an intentional disconnect", async () => {
+    await transport.connect();
+    const pending = transport.send(request);
+    transport.disconnect();
+    await expect(pending).rejects.toThrow("Native Messaging disconnected");
+  });
+
+  it("ignores a delayed disconnect event from a stale port after reconnect", async () => {
+    const oldPort = new FakePort();
+    const newPort = new FakePort();
+    connectNative.mockReset().mockReturnValueOnce(oldPort).mockReturnValueOnce(newPort);
+    await transport.connect();
+    transport.disconnect();
+    await transport.connect();
+
+    oldPort.onDisconnect.emit();
+    const pending = transport.send({ ...request, request_id: "new-port-request" });
+    newPort.onMessage.emit({ type: "ack", request_id: "new-port-request", accepted: true });
+
+    await expect(pending).resolves.toBeUndefined();
+    expect(newPort.postMessage).toHaveBeenCalledTimes(1);
+  });
 });
