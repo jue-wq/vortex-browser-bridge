@@ -191,7 +191,8 @@ export default defineBackground(() => {
         await saveSettings({ ...settings, autoCapture: message.enabled as boolean });
         await installContextMenus();
         await installDownloadListener();
-        return { type: "capture_state", enabled: message.enabled, permissionsGranted: true };
+        const permissionsGranted = await browser.permissions.contains({ permissions: ["contextMenus", "downloads"] });
+        return { type: "capture_state", enabled: message.enabled, permissionsGranted };
       });
     }
     return undefined;
