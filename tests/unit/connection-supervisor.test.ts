@@ -59,6 +59,26 @@ describe("ConnectionSupervisor", () => {
     expect(scheduler.delays).toEqual([]);
   });
 
+  it("does not publish a stale connection failure after stop()", async () => {
+    const transport = new FakeTransport();
+    let rejectConnect!: (error: Error) => void;
+    transport.connect.mockImplementation(() => new Promise<void>((_resolve, reject) => {
+      rejectConnect = reject;
+    }));
+    const scheduler = new FakeScheduler();
+    const onState = vi.fn();
+    const supervisor = new ConnectionSupervisor(new ConnectionManager(transport), () => handshake, scheduler, onState);
+
+    supervisor.start();
+    supervisor.stop();
+    rejectConnect(new Error("late host failure"));
+    await vi.waitFor(() => expect(transport.connect).toHaveBeenCalledOnce());
+    await Promise.resolve();
+
+    expect(onState).not.toHaveBeenCalled();
+    expect(scheduler.delays).toEqual([]);
+  });
+
   it("sends capture messages only after the handshake completes", async () => {
     const transport = new FakeTransport();
     const order: string[] = [];
