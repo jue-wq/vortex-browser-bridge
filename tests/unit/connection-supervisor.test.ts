@@ -39,6 +39,26 @@ const handshake: OutboundMessage = {
 };
 
 describe("ConnectionSupervisor", () => {
+
+  it("does not complete a connection attempt after stop() is called", async () => {
+    const transport = new FakeTransport();
+    let resolveConnect!: () => void;
+    transport.connect.mockImplementation(() => new Promise<void>((resolve) => {
+      resolveConnect = resolve;
+    }));
+    const scheduler = new FakeScheduler();
+    const manager = new ConnectionManager(transport);
+    const supervisor = new ConnectionSupervisor(manager, () => handshake, scheduler);
+
+    supervisor.start();
+    supervisor.stop();
+    resolveConnect();
+    await vi.waitFor(() => expect(manager.isConnected).toBe(false));
+
+    expect(transport.send).not.toHaveBeenCalled();
+    expect(scheduler.delays).toEqual([]);
+  });
+
   it("sends capture messages only after the handshake completes", async () => {
     const transport = new FakeTransport();
     const order: string[] = [];
