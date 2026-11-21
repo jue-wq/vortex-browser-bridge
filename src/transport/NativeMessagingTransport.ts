@@ -17,6 +17,8 @@ interface PendingRequest {
 
 export class NativeMessagingTransport implements ITransport {
   private port: NativePort | null = null;
+  private messageHandler: ((message: unknown) => void) | null = null;
+  private disconnectHandler: (() => void) | null = null;
   private readonly messageListeners = new Set<MessageListener>();
   private readonly disconnectListeners = new Set<DisconnectListener>();
   private readonly pending = new Map<string, PendingRequest>();
@@ -30,18 +32,36 @@ export class NativeMessagingTransport implements ITransport {
     if (this.port) return;
 
     const port = browser.runtime.connectNative(this.hostName) as unknown as NativePort;
+    const onMessage = (raw: unknown): void => {
+      if (this.port !== port) return;
+      this.handleMessage(raw);
+    };
+    const onDisconnect = (): void => {
+      if (this.port !== port) return;
+      const errorText = browser.runtime.lastError?.message ?? "Native host disconnected";
+      this.detachPort(port);
+      this.rejectPending(errorText);
+      for (const listener of this.disconnectListeners) listener(errorText);
+    };
+
     this.port = port;
-    port.onMessage.addListener(this.handleMessage);
-    port.onDisconnect.addListener(this.handleDisconnect);
+    this.messageHandler = onMessage;
+    this.disconnectHandler = onDisconnect;
+    port.onMessage.addListener(onMessage);
+    port.onDisconnect.addListener(onDisconnect);
   }
 
   disconnect(): void {
-    this.port?.disconnect();
-    this.port = null;
+    const port = this.port;
+    if (!port) return;
+    this.detachPort(port);
+    this.rejectPending("Native Messaging disconnected");
+    port.disconnect();
   }
 
   async send(message: OutboundMessage): Promise<void> {
-    if (!this.port) throw new Error("Native Messaging is not connected");
+    const port = this.port;
+    if (!port) throw new Error("Native Messaging is not connected");
 
     const requestId = message.type === "handshake"
       ? undefined
@@ -49,21 +69,22 @@ export class NativeMessagingTransport implements ITransport {
     const payload = requestId ? { ...message, request_id: requestId } : message;
 
     if (!requestId) {
-      this.port.postMessage(payload);
+      port.postMessage(payload);
       return;
     }
 
-    if (this.pending.has(requestId)) throw new Error(`Duplicate pending Native Messaging request ID: ${requestId}`);
+    if (this.pending.has(requestId)) throw new Error("Duplicate pending Native Messaging request ID: " + requestId);
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(requestId);
-        reject(new Error(`Native host acknowledgement timed out (${requestId})`));
+        reject(new Error("Native host acknowledgement timed out (" + requestId + ")"));
       }, this.ackTimeoutMs);
 
       this.pending.set(requestId, { resolve, reject, timeout });
       try {
-        this.port?.postMessage(payload);
+        if (this.port !== port) throw new Error("Native Messaging connection changed before send");
+        port.postMessage(payload);
       } catch (error) {
         clearTimeout(timeout);
         this.pending.delete(requestId);
@@ -82,7 +103,7 @@ export class NativeMessagingTransport implements ITransport {
     return () => this.disconnectListeners.delete(listener);
   }
 
-  private readonly handleMessage = (raw: unknown): void => {
+  private handleMessage(raw: unknown): void {
     const parsed = InboundMessageSchema.safeParse(raw);
     if (!parsed.success) return;
 
@@ -98,16 +119,22 @@ export class NativeMessagingTransport implements ITransport {
     }
 
     for (const listener of this.messageListeners) listener(message);
-  };
+  }
 
-  private readonly handleDisconnect = (): void => {
-    const errorText = browser.runtime.lastError?.message ?? "Native host disconnected";
+  private detachPort(port: NativePort): void {
+    if (this.port !== port) return;
+    if (this.messageHandler) port.onMessage.removeListener(this.messageHandler);
+    if (this.disconnectHandler) port.onDisconnect.removeListener(this.disconnectHandler);
     this.port = null;
+    this.messageHandler = null;
+    this.disconnectHandler = null;
+  }
+
+  private rejectPending(reason: string): void {
     for (const [id, pending] of this.pending) {
       clearTimeout(pending.timeout);
-      pending.reject(new Error(errorText));
       this.pending.delete(id);
+      pending.reject(new Error(reason));
     }
-    for (const listener of this.disconnectListeners) listener(errorText);
-  };
+  }
 }
