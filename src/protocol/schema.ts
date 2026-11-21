@@ -34,8 +34,8 @@ export const AddDownloadSchema = z.object({
   filename: z.string().max(1024).optional(),
   headers: HeaderMap.optional(),
   cookies: z.array(CookieSchema).max(256).optional(),
-  referrer: z.string().max(8192).optional(),
-  download_page: z.string().max(8192).optional(),
+  referrer: HttpUrl.optional(),
+  download_page: HttpUrl.optional(),
   auto_start: z.boolean().optional(),
   queue_id: z.string().max(128).optional()
 });
