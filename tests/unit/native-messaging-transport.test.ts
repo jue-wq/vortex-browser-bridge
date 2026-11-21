@@ -80,12 +80,11 @@ describe("NativeMessagingTransport", () => {
     try {
       await transport.connect();
       const pending = transport.send(request);
+      const rejection = expect(pending).rejects.toThrow("acknowledgement timed out");
       await vi.advanceTimersByTimeAsync(14_999);
-      let settled = false;
-      void pending.finally(() => { settled = true; }).catch(() => undefined);
-      expect(settled).toBe(false);
+      expect(vi.getTimerCount()).toBe(1);
       await vi.advanceTimersByTimeAsync(1);
-      await expect(pending).rejects.toThrow("acknowledgement timed out");
+      await rejection;
     } finally {
       vi.useRealTimers();
     }
