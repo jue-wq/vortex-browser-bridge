@@ -136,6 +136,9 @@ export default defineBackground(() => {
       );
       if (result === "kept_in_browser") {
         console.info("[VortexDM] Handoff was not acknowledged; browser download continues.");
+      } else if (result === "accepted_cancel_failed") {
+        console.warn("[VortexDM] Desktop accepted the download, but the browser copy could not be cancelled and remains paused to avoid a duplicate transfer.");
+        void browser.runtime.sendMessage({ type: "capture_cancel_failed" }).catch(() => undefined);
       }
     } catch (error) {
       console.warn("[VortexDM] Download handoff failed; browser download was left intact where possible.", error);
