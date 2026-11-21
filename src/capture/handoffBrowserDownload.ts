@@ -9,7 +9,7 @@ export interface BrowserDownloadItem {
   state?: string;
 }
 
-export type HandoffResult = "skipped" | "handed_off" | "kept_in_browser";
+export type HandoffResult = "skipped" | "handed_off" | "kept_in_browser" | "accepted_cancel_failed";
 
 /**
  * Pause first, then hand off. The original browser download is cancelled only
@@ -44,10 +44,18 @@ export async function handoffBrowserDownload(
       download_page: item.referrer,
       auto_start: true
     }));
+  } catch {
+    // No positive ACK: restore the original browser download.
+    try { await resume(item.id); } catch { /* Keep best-effort fallback non-fatal. */ }
+    return "kept_in_browser";
+  }
+
+  try {
     await cancel(item.id);
     return "handed_off";
   } catch {
-    try { await resume(item.id); } catch { /* Keep best-effort fallback non-fatal. */ }
-    return "kept_in_browser";
+    // The desktop has accepted the item. Resuming now could create a duplicate
+    // transfer, so leave the original paused for explicit user recovery.
+    return "accepted_cancel_failed";
   }
 }
