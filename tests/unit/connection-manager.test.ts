@@ -34,6 +34,24 @@ describe("ConnectionManager", () => {
     expect(manager.isConnected).toBe(true);
   });
 
+  it("does not become connected when disconnected during a pending connect", async () => {
+    const transport = new FakeTransport();
+    let resolveConnect!: () => void;
+    transport.connect = vi.fn(() => new Promise<void>((resolve) => {
+      resolveConnect = resolve;
+    }));
+    const onMessage = vi.spyOn(transport, "onMessage");
+    const manager = new ConnectionManager(transport);
+
+    const pending = manager.connect();
+    manager.disconnect();
+    resolveConnect();
+    await pending;
+
+    expect(manager.isConnected).toBe(false);
+    expect(onMessage).not.toHaveBeenCalled();
+  });
+
   it("forwards validated inbound messages to subscribers", async () => {
     const transport = new FakeTransport();
     const manager = new ConnectionManager(transport);
