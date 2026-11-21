@@ -3,6 +3,7 @@ import type { DisconnectListener, ITransport, MessageListener } from "./ITranspo
 
 export class ConnectionManager {
   private connected = false;
+  private lifecycleGeneration = 0;
   private connecting: Promise<void> | null = null;
   private readonly listeners = new Set<MessageListener>();
   private readonly disconnectListeners = new Set<DisconnectListener>();
@@ -15,7 +16,9 @@ export class ConnectionManager {
     if (this.connected) return;
     if (this.connecting) return this.connecting;
 
-    this.connecting = this.transport.connect().then(() => {
+    const generation = this.lifecycleGeneration;
+    const attempt = this.transport.connect().then(() => {
+      if (generation !== this.lifecycleGeneration) return;
       this.unsubscribeMessage = this.transport.onMessage((message) => {
         for (const listener of this.listeners) listener(message);
       });
@@ -29,10 +32,10 @@ export class ConnectionManager {
       });
       this.connected = true;
     }).finally(() => {
-      this.connecting = null;
+      if (this.connecting === attempt) this.connecting = null;
     });
-
-    return this.connecting;
+    this.connecting = attempt;
+    return attempt;
   }
 
   async send(message: OutboundMessage): Promise<void> {
@@ -51,6 +54,8 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.lifecycleGeneration += 1;
+    this.connecting = null;
     this.unsubscribeMessage?.();
     this.unsubscribeDisconnect?.();
     this.unsubscribeMessage = null;
