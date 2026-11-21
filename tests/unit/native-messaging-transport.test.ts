@@ -78,6 +78,7 @@ describe("NativeMessagingTransport", () => {
   it("allows up to 15 seconds for the default native-host ACK window", async () => {
     vi.useFakeTimers();
     try {
+      transport = new NativeMessagingTransport();
       await transport.connect();
       const pending = transport.send(request);
       let rejected = false;
