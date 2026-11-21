@@ -150,6 +150,23 @@ describe("ConnectionSupervisor", () => {
     supervisor.stop();
   });
 
+  it("does not accumulate disconnect subscriptions across reconnects", async () => {
+    const transport = new FakeTransport();
+    const scheduler = new FakeScheduler();
+    const supervisor = new ConnectionSupervisor(
+      new ConnectionManager(transport), () => handshake, scheduler
+    );
+
+    supervisor.start();
+    await vi.waitFor(() => expect(transport.send).toHaveBeenCalledWith(handshake));
+    transport.drop();
+    await supervisor.retry();
+    transport.drop();
+
+    expect(scheduler.delays).toEqual([30_000, 30_000]);
+    supervisor.stop();
+  });
+
   it("resets retry delay after a successful handshake", async () => {
     const transport = new FakeTransport();
     transport.connect.mockRejectedValueOnce(new Error("host missing"));
