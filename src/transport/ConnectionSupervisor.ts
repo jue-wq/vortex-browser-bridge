@@ -29,6 +29,7 @@ export class ConnectionSupervisor {
   start(): void {
     if (this.started) return;
     this.started = true;
+    this.lifecycleGeneration += 1;
     this.unsubscribeDisconnect = this.connection.onDisconnect((reason) => {
       this.onState?.("disconnected", reason);
       this.scheduleRetry();
@@ -89,6 +90,11 @@ export class ConnectionSupervisor {
       }
     })().finally(() => {
       this.connecting = null;
+      // A stop/start cycle may have superseded this in-flight attempt.
+      // Once it settles, immediately service the newer lifecycle.
+      if (this.started && generation !== this.lifecycleGeneration && !this.connection.isConnected) {
+        void this.connectNow();
+      }
     });
 
     return this.connecting;
