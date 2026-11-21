@@ -31,6 +31,7 @@ function Popup() {
         setConnection(message.state);
       }
       if (message.type === "capture_error") setNotice("VortexDM did not acknowledge the handoff. Your browser download was kept.");
+      if (message.type === "capture_cancel_failed") setNotice("VortexDM accepted the download, but the browser copy could not be cancelled and remains paused. Check the browser downloads list to avoid a duplicate.");
       if (message.type === "desktop_state" && "status" in message && "queues" in message) {
         if (message.status && typeof message.status === "object" && "active_downloads" in message.status) setDesktopStatus(message.status as DesktopStatus);
         if (message.queues && typeof message.queues === "object" && "queues" in message.queues) setDesktopQueues(message.queues as QueueSnapshot);
