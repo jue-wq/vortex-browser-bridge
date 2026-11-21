@@ -62,7 +62,7 @@ class MockNativeHostTests(unittest.TestCase):
 
     def test_handshake_returns_initial_status_and_queues(self):
         self.handshake()
-        self.assertEqual(read_frame if False else "ok", "ok")
+        # The helper also verifies both initial handshake frames and queue shape.
 
     def test_request_before_handshake_is_rejected(self):
         write_frame(self.process.stdin, {
