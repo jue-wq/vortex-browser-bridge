@@ -75,6 +75,22 @@ describe("NativeMessagingTransport", () => {
     await expect(first).resolves.toBeUndefined();
   });
 
+  it("allows up to 15 seconds for the default native-host ACK window", async () => {
+    vi.useFakeTimers();
+    try {
+      await transport.connect();
+      const pending = transport.send(request);
+      await vi.advanceTimersByTimeAsync(14_999);
+      let settled = false;
+      void pending.finally(() => { settled = true; }).catch(() => undefined);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(pending).rejects.toThrow("acknowledgement timed out");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects a request when the ACK deadline expires", async () => {
     transport = new NativeMessagingTransport("com.vortexdm.native_host", 5);
     await transport.connect();
