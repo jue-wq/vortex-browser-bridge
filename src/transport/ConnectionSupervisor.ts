@@ -15,6 +15,7 @@ export interface ReconnectScheduler {
 export class ConnectionSupervisor {
   private started = false;
   private retryAttempt = 0;
+  private lifecycleGeneration = 0;
   private connecting: Promise<void> | null = null;
   private unsubscribeDisconnect: (() => void) | null = null;
 
@@ -52,6 +53,7 @@ export class ConnectionSupervisor {
 
   stop(): void {
     this.started = false;
+    this.lifecycleGeneration += 1;
     this.scheduler.cancel();
     this.unsubscribeDisconnect?.();
     this.unsubscribeDisconnect = null;
@@ -63,10 +65,19 @@ export class ConnectionSupervisor {
     if (this.connecting) return this.connecting;
     if (this.connection.isConnected) return;
 
+    const generation = this.lifecycleGeneration;
     this.connecting = (async () => {
       try {
         await this.connection.connect();
+        if (!this.started || generation !== this.lifecycleGeneration) {
+          this.connection.disconnect();
+          return;
+        }
         await this.connection.send(this.handshake());
+        if (!this.started || generation !== this.lifecycleGeneration) {
+          this.connection.disconnect();
+          return;
+        }
         this.retryAttempt = 0;
         this.scheduler.cancel();
         this.onState?.("connected");
