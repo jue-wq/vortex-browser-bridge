@@ -83,6 +83,7 @@ export class ConnectionSupervisor {
         this.onState?.("connected");
       } catch (error) {
         this.connection.disconnect();
+        if (!this.started || generation !== this.lifecycleGeneration) return;
         this.onState?.("disconnected", error instanceof Error ? error.message : String(error));
         this.scheduleRetry();
       }
