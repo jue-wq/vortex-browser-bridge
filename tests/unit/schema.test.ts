@@ -39,6 +39,20 @@ describe("IPC schemas", () => {
     expect(OutboundMessageSchema.safeParse({ type: "add_download", url: "https://user:secret@example.com/file" }).success).toBe(false);
   });
 
+
+  it("rejects credential-bearing source URLs at the IPC boundary", () => {
+    expect(OutboundMessageSchema.safeParse({
+      type: "add_download",
+      url: "https://example.com/file",
+      referrer: "https://user:secret@example.com/page"
+    }).success).toBe(false);
+    expect(OutboundMessageSchema.safeParse({
+      type: "add_download",
+      url: "https://example.com/file",
+      download_page: "https://user:secret@example.com/page"
+    }).success).toBe(false);
+  });
+
   it("bounds collection sizes and string lengths", () => {
     expect(OutboundMessageSchema.safeParse({
       type: "handshake", protocol_version: 1,
