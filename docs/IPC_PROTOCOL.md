@@ -1,6 +1,6 @@
 # IPC Protocol v1 — Browser Bridge implementation contract
 
-> Status: browser-side implementation draft aligned to the shared proposal in [VortexDM](https://github.com/jue-wq/VortexDM/blob/main/docs/IPC_PROTOCOL.md). The production desktop host is not implemented. Keep both documents synchronized until the desktop implementation and integration tests are merged.
+> Status: browser-side implementation draft aligned to the shared proposal in [VortexDM](https://github.com/jue-wq/VortexDM/blob/feature/native-host-stream-adapter/docs/IPC_PROTOCOL.md). A partial standalone Firefox Native Messaging host now exists in [VortexDM PR #3](https://github.com/jue-wq/VortexDM/pull/3); it stages single downloads but deliberately sends negative ACKs until the app queue adapter is connected. This is not a production-ready end-to-end bridge.
 
 ## Transport
 
@@ -11,7 +11,7 @@
 
 ## Extension → desktop
 
-- `handshake`: `protocol_version: 1`, `extension_version`, `capabilities[]`. No ACK required; host should respond with initial status and queue snapshots.
+- `handshake`: `protocol_version: 1`, `extension_version`, `capabilities[]`. No ACK required. The current VortexDM host requires it as the first frame but does not yet publish initial status or queue snapshots.
 - `add_download`: required `url`; optional `filename`, `headers`, transient `cookies`, `referrer`, `download_page`, `auto_start`, `queue_id`, `request_id`.
 - `extract_media`: required `webpage_url`; optional `page_title`, `user_agent`, transient `cookies`, `playlist_mode`, `request_id`.
 - `add_batch`: non-empty `links[]`; optional `queue_id`, `auto_start`, `request_id`, `chunk_index`, `chunk_total`.
