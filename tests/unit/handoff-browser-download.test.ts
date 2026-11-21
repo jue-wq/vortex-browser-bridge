@@ -27,6 +27,17 @@ describe("handoffBrowserDownload", () => {
     expect(cancel).not.toHaveBeenCalled();
   });
 
+  it("does not resume after a positive ACK if cancelling the browser copy fails", async () => {
+    const send = vi.fn(async () => undefined);
+    const pause = vi.fn(async () => undefined);
+    const resume = vi.fn(async () => undefined);
+    const cancel = vi.fn(async () => { throw new Error("cancel failed"); });
+    await expect(handoffBrowserDownload(item, true, send, pause, resume, cancel)).resolves.toBe("accepted_cancel_failed");
+    expect(send).toHaveBeenCalledOnce();
+    expect(cancel).toHaveBeenCalledWith(7);
+    expect(resume).not.toHaveBeenCalled();
+  });
+
   it("leaves completed, incognito, disabled, or non-HTTP downloads untouched", async () => {
     const send = vi.fn(async () => undefined);
     const pause = vi.fn(async () => undefined);
